@@ -25,7 +25,12 @@ ENV AS=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-as \
     CPP=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-cpp \
     CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-g++ \
     LD=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-ld \
-    FC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-gfortran
+    FC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-gfortran \
+    GCOV=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-gcov \
+    GCOVR=/usr/local/bin/gcovr \
+    OBJCOPY=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-objcopy \
+    READELF=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-readelf \
+    STRIP=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-strip
 
 ENV QEMU_LD_PREFIX "${CROSS_ROOT}/${CROSS_TRIPLE}/sysroot"
 ENV QEMU_SET_ENV "LD_LIBRARY_PATH=${CROSS_ROOT}/lib:${QEMU_LD_PREFIX}"
@@ -39,5 +44,11 @@ ENV PKG_CONFIG_PATH /usr/lib/aarch64-linux-gnu/pkgconfig
 ENV PATH ${PATH}:${CROSS_ROOT}/bin
 ENV CROSS_COMPILE ${CROSS_TRIPLE}-
 ENV ARCH arm64
+
+# Autodetect the conan profile and create the directory and adjuust some settings from the default
+RUN conan profile new default --detect \
+ && conan profile update settings.build_type=RelWithDebInfo default \
+ && conan profile update settings.compiler.version=8.2 default \
+ && conan profile update settings.arch=armv8 default
 
 #include "common.label-and-env"
