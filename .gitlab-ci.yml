@@ -1,0 +1,103 @@
+
+variables:
+  TIMESTAMP: $(date +'%y%m%d_%H%I')
+  DOCKER_REPO: artifactory-pub.bit9.local:5000
+  BASE_NAME: ${DOCKER_REPO}/cbdev/dockcross
+  DOCKCROSS_BASE_IMAGE: ${BASE_NAME}/base:${CI_BUILD_REF}
+  # DOCKER_OPTS: --insecure-registry="${DOCKER_REPO}"
+
+image: ${DOCKER_REPO}/re/releng/ubuntu2004:latest
+# image: ${DOCKER_REPO}/re/releng/photon4-re-internal:latest
+
+stages:
+  - build
+
+before_script:
+  - docker login -u $SVC_GITLAB_USER_NAME -p $SVC_GITLAB_PASSWORD $DOCKER_REPO
+
+.setup_variables: &setup_variables |
+    IMAGE=${BASE_NAME}/${TARGET}
+    IMAGE_LATEST=${IMAGE}:latest
+    IMAGE_COMMIT=${IMAGE}:${CI_BUILD_REF}
+    IMAGE_BRANCH=${IMAGE}:${CI_BUILD_REF_NAME}
+
+.build_script: &build_script |
+    make ORG=${BASE_NAME} ${TARGET}
+    docker tag ${IMAGE_LATEST} ${IMAGE_COMMIT}
+    docker tag ${IMAGE_LATEST} ${IMAGE_BRANCH}
+    docker push ${IMAGE_LATEST}
+    docker push ${IMAGE_COMMIT}
+    docker push ${IMAGE_BRANCH}
+
+build:x86_64:base:
+  stage: build
+  script:
+    - *setup_variables
+    - *build_script
+  when: always
+  variables:
+    TARGET: base
+
+build:x86_64:linux-x86_64-centos7:
+  stage: build
+  script:
+    - docker pull ${DOCKCROSS_BASE_IMAGE}
+    - *setup_variables
+    - *build_script
+  when: on_success
+  variables:
+    TARGET: linux-x86_64-centos7
+  needs:
+    - job: build:x86_64:base
+
+build:x86_64:linux-arm64-lts:
+  stage: build
+  script:
+    - docker pull ${DOCKCROSS_BASE_IMAGE}
+    - *setup_variables
+    - *build_script
+  when: on_success
+  variables:
+    TARGET: linux-arm64-lts
+  needs:
+    - job: build:x86_64:base
+
+build:aarch64:base:
+  stage: build
+  tags:
+    - aarch64
+  script:
+    - *setup_variables
+    - *build_script
+  when: always
+  variables:
+    TARGET: base
+
+build:aarch64:linux-x86_64-centos7:
+  stage: build
+  tags:
+    - aarch64
+  script:
+    - docker pull ${DOCKCROSS_BASE_IMAGE}
+    - *setup_variables
+    - *build_script
+  when: on_success
+  variables:
+    TARGET: linux-x86_64-centos7
+  needs:
+    - job: build:aarch64:base
+
+build:aarch64:linux-arm64-lts:
+  stage: build
+  tags:
+    - aarch64
+  script:
+    - docker pull ${DOCKCROSS_BASE_IMAGE}
+    - *setup_variables
+    - *build_script
+  when: on_success
+  variables:
+    TARGET: linux-arm64-lts
+  needs:
+    - job: build:aarch64:base
+
